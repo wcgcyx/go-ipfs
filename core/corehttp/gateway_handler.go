@@ -64,7 +64,8 @@ type gatewayHandler struct {
 	config GatewayConfig
 	api    coreiface.CoreAPI
 
-	unixfsGetMetric *prometheus.SummaryVec
+	unixfsGetMetric     *prometheus.SummaryVec
+	unixfsGetHistMetric *prometheus.HistogramVec
 }
 
 // StatusResponseWriter enables us to override HTTP Status Code passed to
@@ -104,10 +105,29 @@ func newGatewayHandler(c GatewayConfig, api coreiface.CoreAPI) *gatewayHandler {
 		}
 	}
 
+	unixfsGetHistMetric := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "ipfs",
+			Subsystem: "http",
+			Name:      "unixfs_get_latency_hist_seconds",
+			Help:      "The time till the first block is received when 'getting' a file from the gateway.",
+			Buckets:   []float64{0.1, 0.5, 1, 2, 3, 5, 8, 13},
+		},
+		[]string{"gateway"},
+	)
+	if err := prometheus.Register(unixfsGetHistMetric); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			unixfsGetHistMetric = are.ExistingCollector.(*prometheus.HistogramVec)
+		} else {
+			log.Errorf("failed to register unixfsGetMetric: %v", err)
+		}
+	}
+
 	i := &gatewayHandler{
-		config:          c,
-		api:             api,
-		unixfsGetMetric: unixfsGetMetric,
+		config:              c,
+		api:                 api,
+		unixfsGetMetric:     unixfsGetMetric,
+		unixfsGetHistMetric: unixfsGetHistMetric,
 	}
 	return i
 }
@@ -292,7 +312,9 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	i.unixfsGetMetric.WithLabelValues(parsedPath.Namespace()).Observe(time.Since(begin).Seconds())
+	timeToGetFirstNode := time.Since(begin).Seconds()
+	i.unixfsGetMetric.WithLabelValues(parsedPath.Namespace()).Observe(timeToGetFirstNode)
+	i.unixfsGetHistMetric.WithLabelValues(parsedPath.Namespace()).Observe(timeToGetFirstNode)
 
 	defer dr.Close()
 
