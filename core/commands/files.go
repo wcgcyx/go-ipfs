@@ -9,6 +9,7 @@ import (
 	gopath "path"
 	"sort"
 	"strings"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/ipfs/go-ipfs/core"
@@ -768,6 +769,8 @@ stat' on the file or any of its ancestors.
 		cmds.BoolOption(filesTruncateOptionName, "t", "Truncate the file to size zero before writing."),
 		cmds.Int64Option(filesCountOptionName, "n", "Maximum number of bytes to read."),
 		cmds.BoolOption(filesRawLeavesOptionName, "Use raw blocks for newly created leaf nodes. (experimental)"),
+		// FIXME: Fake lock for manual testing. Remove.
+		cmds.IntOption("lock-time", "lt", "[TESTING] timeout to hold the MFS lock while copying").WithDefault(0),
 		cidVersionOption,
 		hashOption,
 	},
@@ -792,6 +795,11 @@ stat' on the file or any of its ancestors.
 		if err != nil {
 			return err
 		}
+		filesRoot := nd.LockedFilesRoot.LockRoot()
+		defer nd.LockedFilesRoot.UnlockRoot()
+		// Keep the hold for a fake, arbitrary amount of time to test it manually.
+		timeout, _ := req.Options["lock-time"].(int)
+		defer time.Sleep(time.Duration(timeout) * time.Second)
 
 		offset, _ := req.Options[filesOffsetOptionName].(int64)
 		if offset < 0 {
@@ -799,13 +807,13 @@ stat' on the file or any of its ancestors.
 		}
 
 		if mkParents {
-			err := ensureContainingDirectoryExists(nd.FilesRoot, path, prefix)
+			err := ensureContainingDirectoryExists(filesRoot, path, prefix)
 			if err != nil {
 				return err
 			}
 		}
 
-		fi, err := getFileHandle(nd.FilesRoot, path, create, prefix)
+		fi, err := getFileHandle(filesRoot, path, create, prefix)
 		if err != nil {
 			return err
 		}

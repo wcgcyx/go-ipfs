@@ -82,6 +82,7 @@ type IpfsNode struct {
 	Reporter             *metrics.BandwidthCounter `optional:"true"`
 	Discovery            mdns.Service              `optional:"true"`
 	FilesRoot            *mfs.Root
+	LockedFilesRoot      *node.LockedFilesRoot
 	RecordValidator      record.Validator
 
 	// Online

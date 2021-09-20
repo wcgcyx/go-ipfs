@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
@@ -167,4 +168,25 @@ func Files(mctx helpers.MetricsCtx, lc fx.Lifecycle, repo repo.Repo, dag format.
 	})
 
 	return root, err
+}
+
+func LockedFiles(mctx helpers.MetricsCtx, lc fx.Lifecycle, root *mfs.Root) (*LockedFilesRoot, error) {
+	return &LockedFilesRoot{
+		root: root,
+		lock: &sync.Mutex{},
+	}, nil
+}
+
+type LockedFilesRoot struct {
+	root *mfs.Root
+	lock *sync.Mutex
+}
+
+func (lfr *LockedFilesRoot) LockRoot() *mfs.Root {
+	lfr.lock.Lock()
+	return lfr.root
+}
+
+func (lfr *LockedFilesRoot) UnlockRoot() {
+	lfr.lock.Unlock()
 }
