@@ -54,6 +54,7 @@ func (api *DhtAPI) FindProviders(ctx context.Context, p path.Path, opts ...caopt
 		return nil, fmt.Errorf("number of providers must be greater than 0")
 	}
 
+	fmt.Printf("Find providers for %v\n", rp.Cid().String())
 	pchan := api.routing.FindProvidersAsync(ctx, rp.Cid(), numProviders)
 	return pchan, nil
 }
@@ -99,6 +100,7 @@ func (api *DhtAPI) Provide(ctx context.Context, path path.Path, opts ...caopts.D
 
 func provideKeys(ctx context.Context, r routing.Routing, cids []cid.Cid) error {
 	for _, c := range cids {
+		fmt.Printf("Providing: %v with %v\n", c.String(), r)
 		err := r.Provide(ctx, c, true)
 		if err != nil {
 			return err
