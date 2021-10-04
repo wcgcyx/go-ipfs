@@ -523,7 +523,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 	startPinMFS(daemonConfigPollInterval, cctx, &ipfsPinMFSNode{node})
 
 	// The daemon is *finally* ready.
-	fmt.Printf("Daemon is ready\n")
+	fmt.Printf("Daemon is ready!\n")
 	notifyReady()
 
 	// Give the user some immediate feedback when they hit C-c
